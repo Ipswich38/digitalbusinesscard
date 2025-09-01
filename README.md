@@ -56,13 +56,13 @@
 ## 🏗️ **Tech Stack**
 
 - **Framework**: Next.js 15 with App Router
-- **Language**: TypeScript
-- **Database**: PostgreSQL with Prisma ORM
-- **Authentication**: NextAuth.js v5
+- **Language**: TypeScript  
+- **Database**: Supabase (PostgreSQL)
+- **Authentication**: Supabase Auth with Google OAuth
 - **Styling**: Tailwind CSS
 - **UI Components**: Radix UI
 - **Analytics**: Custom real-time tracking
-- **Deployment**: Docker, Vercel, or any Node.js host
+- **Deployment**: Vercel, Docker, or any Node.js host
 
 ## 🚀 **Quick Start**
 
@@ -80,22 +80,24 @@ pnpm install
 
 ### 2. Environment Setup
 ```bash
-# Copy environment template
-cp .env.example .env.local
+# Copy and edit environment variables
+cp .env.local.example .env.local
 
-# Edit with your values
-# Required: DATABASE_URL, NEXTAUTH_SECRET
+# Update with your Supabase credentials:
+NEXT_PUBLIC_SUPABASE_URL="your-supabase-project-url"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="your-supabase-anon-key"
 ```
 
 ### 3. Database Setup
 ```bash
-# Start PostgreSQL (or use Docker)
-docker compose -f docker-compose.dev.yml up -d
+# Test connection (optional)
+node scripts/setup-database.js
 
-# Setup database
-pnpm prisma generate
-pnpm prisma db push
-pnpm run db:seed
+# Set up Supabase database schema:
+# 1. Go to your Supabase dashboard
+# 2. Open SQL Editor
+# 3. Copy and paste the content from supabase/schema.sql
+# 4. Click "Run" to create all tables and policies
 ```
 
 ### 4. Start Development
