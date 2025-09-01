@@ -30,7 +30,7 @@ interface BusinessCard {
 export const dynamic = 'force-dynamic'
 
 export default function DashboardPage() {
-  const { user, loading } = useAuth()
+  const { user, loading, error } = useAuth()
   const [cards, setCards] = useState<BusinessCard[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null)
@@ -66,6 +66,21 @@ export default function DashboardPage() {
   const handleCreateCard = () => {
     // Navigate to the main card creation page
     window.location.href = "/"
+  }
+
+  // Show error state if there's a Supabase configuration error
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-900 flex items-center justify-center">
+        <div className="text-center text-white max-w-md mx-auto p-6">
+          <h1 className="text-2xl font-bold mb-4">Authentication Error</h1>
+          <p className="text-red-400 mb-4">{error}</p>
+          <p className="text-gray-400 text-sm">
+            The app may not be properly configured. Please check the environment variables.
+          </p>
+        </div>
+      </div>
+    )
   }
 
   if (loading || isLoading) {

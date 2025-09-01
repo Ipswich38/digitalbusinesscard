@@ -7,12 +7,14 @@ import type { User } from '@supabase/supabase-js'
 interface AuthContextType {
   user: User | null
   loading: boolean
+  error: string | null
   signOut: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
+  error: null,
   signOut: async () => {},
 })
 
@@ -27,33 +29,60 @@ export const useAuth = () => {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
-
+  const [error, setError] = useState<string | null>(null)
+  
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      setLoading(false)
-    })
+    try {
+      const supabase = createClient()
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setUser(session?.user ?? null)
-      setLoading(false)
-    })
+      // Get initial session
+      supabase.auth.getSession().then(({ data: { session }, error }) => {
+        if (error) {
+          console.error('Supabase session error:', error)
+          setError(error.message)
+        } else {
+          setUser(session?.user ?? null)
+          setError(null)
+        }
+        setLoading(false)
+      }).catch((err) => {
+        console.error('Failed to get session:', err)
+        setError(err.message)
+        setLoading(false)
+      })
 
-    return () => subscription.unsubscribe()
-  }, [supabase.auth])
+      // Listen for auth changes
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange(async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email)
+        setUser(session?.user ?? null)
+        setError(null)
+        setLoading(false)
+      })
+
+      return () => subscription.unsubscribe()
+    } catch (err: any) {
+      console.error('AuthProvider initialization error:', err)
+      setError(err.message)
+      setLoading(false)
+    }
+  }, [])
 
   const signOut = async () => {
-    await supabase.auth.signOut()
+    try {
+      const supabase = createClient()
+      await supabase.auth.signOut()
+    } catch (err: any) {
+      console.error('Sign out error:', err)
+      setError(err.message)
+    }
   }
 
   const value = {
     user,
     loading,
+    error,
     signOut,
   }
 
