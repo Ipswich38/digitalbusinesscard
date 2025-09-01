@@ -9,6 +9,8 @@ import { Lock, Unlock, Eye, Download, ArrowLeft, ArrowRight, Sparkles, CheckCirc
 import QRCodeLib from "qrcode"
 
 import type { UserData } from "@/components/business-card/types"
+import { CategorySelector } from "@/components/category-selector"
+import { getAllCardCategories, type CardCategory, getCategoryById } from "@/lib/card-categories"
 import { LivePreview } from "@/components/business-card/live-preview"
 import { CardPreview } from "@/components/business-card/card-preview"
 import { OnboardingWelcome } from "@/components/business-card/onboarding-welcome"
@@ -27,6 +29,8 @@ const FORM_STEPS = [
 
 export default function DigitalBusinessCard() {
   const { user } = useAuth()
+  const [selectedCategory, setSelectedCategory] = useState<CardCategory>('business')
+  const [showCategorySelector, setShowCategorySelector] = useState(true)
   const [isLocked, setIsLocked] = useState(true)
   const [unlockCode, setUnlockCode] = useState("")
   const [currentView, setCurrentView] = useState<"qr" | "business">("qr")
@@ -175,8 +179,28 @@ export default function DigitalBusinessCard() {
 
   const handleStartOnboarding = () => {
     setShowWelcome(false)
-    setIsLocked(false)
+    setShowCategorySelector(true)
+  }
+
+  const handleCategorySelect = (category: CardCategory) => {
+    setSelectedCategory(category)
+    setShowCategorySelector(false)
+    setIsLocked(false) 
     setShowLivePreview(true)
+    
+    // Apply category-specific defaults
+    const categoryConfig = getCategoryById(category)
+    const defaultTheme = categoryConfig.themes[0]
+    
+    if (defaultTheme) {
+      setUserData(prev => ({
+        ...prev,
+        backgroundColor: defaultTheme.backgroundColor,
+        backgroundGradient: defaultTheme.backgroundGradient,
+        textColor: defaultTheme.textColor,
+        useGradient: true
+      }))
+    }
   }
 
   const handleUnlock = () => {
@@ -195,7 +219,9 @@ export default function DigitalBusinessCard() {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              title: `${userData.firstName}'s Card`,
+              title: `${userData.firstName}'s ${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)} Card`,
+              category: selectedCategory,
+              theme_id: getCategoryById(selectedCategory).themes[0]?.id,
               data: userData,
             }),
           })
@@ -393,6 +419,47 @@ export default function DigitalBusinessCard() {
 
   if (showWelcome) {
     return <OnboardingWelcome onStart={handleStartOnboarding} />
+  }
+
+  if (showCategorySelector) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-900" style={{ paddingTop: !user ? '70px' : '0' }}>
+        {/* Sign Up CTA for non-authenticated users */}
+        {!user && (
+          <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-orange-600 to-orange-500 text-white p-3 text-center">
+            <div className="max-w-4xl mx-auto flex items-center justify-between">
+              <span className="text-sm font-medium">
+                Create your account to save and share your digital cards permanently
+              </span>
+              <div className="flex gap-3">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-white border-white/30 hover:bg-white/10 text-xs"
+                  onClick={() => window.location.href = '/auth/signin'}
+                >
+                  Sign In
+                </Button>
+                <Button
+                  size="sm"
+                  className="bg-white text-orange-600 hover:bg-gray-100 text-xs font-semibold"
+                  onClick={() => window.location.href = '/auth/signup'}
+                >
+                  Get Started Free
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="container mx-auto px-4 py-12">
+          <CategorySelector
+            selectedCategory={selectedCategory}
+            onCategorySelect={handleCategorySelect}
+          />
+        </div>
+      </div>
+    )
   }
 
   const CurrentFormComponent = FORM_STEPS[currentStep].component
