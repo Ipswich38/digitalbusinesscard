@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const headersList = headers()
+    const headersList = await headers()
     const userAgent = headersList.get("user-agent") || undefined
     const country = headersList.get("cf-ipcountry") || undefined // Cloudflare header
     const referrer = headersList.get("referer") || undefined

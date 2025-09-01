@@ -427,7 +427,7 @@ export default function DigitalBusinessCard() {
               userData={userData}
               currentView={currentView}
               qrCodeUrl={qrCodeUrl}
-              hasData={hasData || (userData.firstName.trim() && userData.mobile.trim())}
+              hasData={hasData || Boolean(userData.firstName.trim() && userData.mobile.trim())}
               getSocialMediaOptions={getSocialMediaOptions}
               getSelectedSocialUrl={getSelectedSocialUrl}
               onFlipCard={handleFlipCard}
@@ -542,7 +542,7 @@ export default function DigitalBusinessCard() {
         <div className="flex items-center justify-center p-6 min-h-screen">
           <div className="w-full max-w-sm">
             <Card
-              ref={cardRef}
+              ref={cardRef as React.RefObject<HTMLDivElement>}
               className="border-0 rounded-[28px] shadow-2xl overflow-hidden relative backdrop-blur-sm transition-all duration-300 hover:scale-105"
               style={{
                 background: userData.useGradient ? userData.backgroundGradient : userData.backgroundColor,

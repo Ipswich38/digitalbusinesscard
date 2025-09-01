@@ -9,7 +9,6 @@ import { CardsList } from "@/components/dashboard/cards-list"
 import { AnalyticsDashboard } from "@/components/dashboard/analytics-dashboard"
 import { SignatureGenerator } from "@/components/email/signature-generator"
 import { useSession } from "next-auth/react"
-import { redirect } from "next/navigation"
 
 interface BusinessCard {
   id: string
@@ -27,6 +26,9 @@ interface BusinessCard {
   }
 }
 
+// Force dynamic rendering for this page
+export const dynamic = 'force-dynamic'
+
 export default function DashboardPage() {
   const { data: session, status } = useSession()
   const [cards, setCards] = useState<BusinessCard[]>([])
@@ -35,7 +37,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      redirect("/auth/signin")
+      window.location.href = "/auth/signin"
     }
   }, [status])
 
@@ -86,7 +88,7 @@ export default function DashboardPage() {
           <div>
             <h1 className="text-3xl font-bold text-white">Dashboard</h1>
             <p className="text-gray-400 mt-2">
-              Welcome back, {session.user.name || session.user.email}
+              Welcome back, {session.user?.name || session.user?.email}
             </p>
           </div>
           <Button 
@@ -212,11 +214,11 @@ export default function DashboardPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-400">Name</label>
-                  <div className="text-white">{session.user.name || "Not set"}</div>
+                  <div className="text-white">{session.user?.name || "Not set"}</div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-400">Email</label>
-                  <div className="text-white">{session.user.email}</div>
+                  <div className="text-white">{session.user?.email}</div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-400">Plan</label>

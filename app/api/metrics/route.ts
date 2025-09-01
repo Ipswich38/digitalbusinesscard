@@ -31,7 +31,7 @@ export async function GET() {
       _count: {
         id: true,
       },
-    })
+    }) as any[]
 
     // Get recent activity (last 30 days)
     const thirtyDaysAgo = new Date()
@@ -55,7 +55,7 @@ export async function GET() {
         views: totalViews._sum.views || 0,
         qrScans: totalQRScans._sum.qrScans || 0,
       },
-      usersByPlan: usersByPlan.reduce((acc, item) => {
+      usersByPlan: usersByPlan.reduce((acc: any, item: any) => {
         acc[item.plan.toLowerCase()] = item._count.id
         return acc
       }, {} as Record<string, number>),

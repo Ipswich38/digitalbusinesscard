@@ -34,13 +34,13 @@ export async function GET(request: NextRequest) {
     })
 
     // Transform the data to include analytics summary
-    const cardsWithAnalytics = cards.map((card) => ({
+    const cardsWithAnalytics = cards.map((card: any) => ({
       ...card,
       analytics: card.analytics.length > 0 ? {
-        views: card.analytics.reduce((sum, a) => sum + a.views, 0),
-        qrScans: card.analytics.reduce((sum, a) => sum + a.qrScans, 0),
-        contactClicks: card.analytics.reduce((sum, a) => sum + a.contactClicks, 0),
-        socialClicks: card.analytics.reduce((sum, a) => sum + a.socialClicks, 0),
+        views: card.analytics.reduce((sum: number, a: any) => sum + a.views, 0),
+        qrScans: card.analytics.reduce((sum: number, a: any) => sum + a.qrScans, 0),
+        contactClicks: card.analytics.reduce((sum: number, a: any) => sum + a.contactClicks, 0),
+        socialClicks: card.analytics.reduce((sum: number, a: any) => sum + a.socialClicks, 0),
       } : {
         views: 0,
         qrScans: 0,

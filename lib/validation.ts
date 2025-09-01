@@ -99,9 +99,9 @@ export const envSchema = z.object({
   ZAPIER_WEBHOOK_URL: z.string().url("Invalid Zapier webhook URL").optional(),
   
   // Feature flags
-  ENABLE_ANALYTICS: z.string().transform(val => val === "true").optional().default(false),
-  ENABLE_CRM_INTEGRATION: z.string().transform(val => val === "true").optional().default(false),
-  ENABLE_EMAIL_SIGNATURES: z.string().transform(val => val === "true").optional().default(false),
+  ENABLE_ANALYTICS: z.string().transform(val => val === "true").optional(),
+  ENABLE_CRM_INTEGRATION: z.string().transform(val => val === "true").optional(),
+  ENABLE_EMAIL_SIGNATURES: z.string().transform(val => val === "true").optional(),
 })
 
 export type UserData = z.infer<typeof userDataSchema>

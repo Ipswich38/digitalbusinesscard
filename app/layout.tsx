@@ -1,6 +1,7 @@
 import type React from "react"
 import type { Metadata } from "next"
 import { ThemeProvider } from "@/components/theme-provider"
+import { AuthProvider } from "@/components/providers"
 import "./globals.css"
 
 export const metadata: Metadata = {
@@ -8,8 +9,6 @@ export const metadata: Metadata = {
   description: "Create and share professional digital business cards instantly with real-time analytics, CRM integration, and enterprise features",
   generator: 'Digital Business Card Pro',
   manifest: '/manifest.json',
-  viewport: 'width=device-width, initial-scale=1, viewport-fit=cover',
-  themeColor: '#ea580c',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
@@ -20,6 +19,13 @@ export const metadata: Metadata = {
     'apple-mobile-web-app-capable': 'yes',
     'apple-mobile-web-app-status-bar-style': 'default'
   }
+}
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#ea580c'
 }
 
 export default function RootLayout({
@@ -41,9 +47,11 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="DBCard Pro" />
       </head>
       <body>
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
-          {children}
-        </ThemeProvider>
+        <AuthProvider session={null}>
+          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+            {children}
+          </ThemeProvider>
+        </AuthProvider>
         <script
           dangerouslySetInnerHTML={{
             __html: `
