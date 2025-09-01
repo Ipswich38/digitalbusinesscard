@@ -8,7 +8,7 @@ import { Plus, Eye, Share, BarChart3, Settings, Mail } from "lucide-react"
 import { CardsList } from "@/components/dashboard/cards-list"
 import { AnalyticsDashboard } from "@/components/dashboard/analytics-dashboard"
 import { SignatureGenerator } from "@/components/email/signature-generator"
-import { useSession } from "next-auth/react"
+import { useAuth } from "@/components/providers"
 
 interface BusinessCard {
   id: string
@@ -30,22 +30,22 @@ interface BusinessCard {
 export const dynamic = 'force-dynamic'
 
 export default function DashboardPage() {
-  const { data: session, status } = useSession()
+  const { user, loading } = useAuth()
   const [cards, setCards] = useState<BusinessCard[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null)
 
   useEffect(() => {
-    if (status === "unauthenticated") {
+    if (!loading && !user) {
       window.location.href = "/auth/signin"
     }
-  }, [status])
+  }, [user, loading])
 
   useEffect(() => {
-    if (session?.user) {
+    if (user) {
       fetchCards()
     }
-  }, [session])
+  }, [user])
 
   const fetchCards = async () => {
     try {
@@ -68,7 +68,7 @@ export default function DashboardPage() {
     window.location.href = "/"
   }
 
-  if (status === "loading" || isLoading) {
+  if (loading || isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-900 flex items-center justify-center">
         <div className="text-white">Loading...</div>
@@ -76,7 +76,7 @@ export default function DashboardPage() {
     )
   }
 
-  if (!session) {
+  if (!user) {
     return null // Will redirect
   }
 
@@ -88,7 +88,7 @@ export default function DashboardPage() {
           <div>
             <h1 className="text-3xl font-bold text-white">Dashboard</h1>
             <p className="text-gray-400 mt-2">
-              Welcome back, {session.user?.name || session.user?.email}
+              Welcome back, {user?.user_metadata?.name || user?.email}
             </p>
           </div>
           <Button 
@@ -214,11 +214,11 @@ export default function DashboardPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-400">Name</label>
-                  <div className="text-white">{session.user?.name || "Not set"}</div>
+                  <div className="text-white">{user?.user_metadata?.name || "Not set"}</div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-400">Email</label>
-                  <div className="text-white">{session.user?.email}</div>
+                  <div className="text-white">{user?.email}</div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-400">Plan</label>

@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import { AuthRedirect } from "@/components/auth-redirect"
+import { useAuth } from "@/components/providers"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Lock, Unlock, Eye, Download, ArrowLeft, ArrowRight, Sparkles, CheckCircle, Zap } from "lucide-react"
@@ -24,6 +26,7 @@ const FORM_STEPS = [
 ]
 
 export default function DigitalBusinessCard() {
+  const { user } = useAuth()
   const [isLocked, setIsLocked] = useState(true)
   const [unlockCode, setUnlockCode] = useState("")
   const [currentView, setCurrentView] = useState<"qr" | "business">("qr")
@@ -120,11 +123,11 @@ export default function DigitalBusinessCard() {
     setUnlockCode(code)
   }, [])
 
+  // QR code generation - this creates a preview QR for demo purposes
   useEffect(() => {
     if (hasData || (userData.firstName.trim() && userData.mobile.trim())) {
-      const dataHash = btoa(JSON.stringify(userData)).substring(0, 16)
-      const businessCardUrl = `${window.location.origin}?view=business&id=${dataHash}`
-      localStorage.setItem(`card_${dataHash}`, JSON.stringify(userData))
+      const demoSlug = `${userData.firstName.toLowerCase().replace(/\s+/g, '-')}-demo`
+      const businessCardUrl = `${window.location.origin}/${demoSlug}`
       QRCodeLib.toDataURL(businessCardUrl, {
         color: {
           dark: "#ea580c",
@@ -181,8 +184,51 @@ export default function DigitalBusinessCard() {
     setShowLivePreview(true)
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (userData.firstName.trim() && userData.mobile.trim()) {
+      // If user is authenticated, save to database
+      if (user) {
+        try {
+          const response = await fetch('/api/cards', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              title: `${userData.firstName}'s Card`,
+              data: userData,
+            }),
+          })
+
+          if (!response.ok) {
+            const errorData = await response.json()
+            if (response.status === 403) {
+              // Free plan limit reached
+              alert(errorData.error || 'Free plan limited to 1 card. Please upgrade to create more.')
+              return
+            }
+            throw new Error(errorData.error || 'Failed to save card')
+          }
+
+          const result = await response.json()
+          console.log('Card saved successfully:', result)
+          
+          // Redirect to dashboard to see the saved card
+          window.location.href = '/dashboard'
+          return
+        } catch (error) {
+          console.error('Error saving card:', error)
+          alert('Failed to save card. Please try again.')
+          return
+        }
+      } else {
+        // Show signup prompt for non-authenticated users
+        if (confirm('Sign up to save your card and get a permanent URL with QR code. Continue to create account?')) {
+          window.location.href = '/auth/signup'
+          return
+        }
+      }
+
       setHasData(true)
       setIsLocked(true)
       setShowLivePreview(false)
@@ -352,7 +398,35 @@ export default function DigitalBusinessCard() {
   const CurrentFormComponent = FORM_STEPS[currentStep].component
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-900 relative">
+    <AuthRedirect>
+      <div className="min-h-screen bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-900 relative">
+        {/* Sign Up CTA for non-authenticated users */}
+        {!user && (
+          <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-orange-600 to-orange-500 text-white p-3 text-center">
+            <div className="max-w-4xl mx-auto flex items-center justify-between">
+              <span className="text-sm font-medium">
+                Create your account to save and share your digital business card permanently
+              </span>
+              <div className="flex gap-3">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-white border-white/30 hover:bg-white/10 text-xs"
+                  onClick={() => window.location.href = '/auth/signin'}
+                >
+                  Sign In
+                </Button>
+                <Button
+                  size="sm"
+                  className="bg-white text-orange-600 hover:bg-gray-100 text-xs font-semibold"
+                  onClick={() => window.location.href = '/auth/signup'}
+                >
+                  Get Started Free
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       <CardHistoryPanel
         isOpen={isHistoryPanelOpen}
         onToggle={toggleHistoryPanel}
@@ -414,7 +488,7 @@ export default function DigitalBusinessCard() {
       `}</style>
 
       {showLivePreview && !isLocked ? (
-        <div className="flex min-h-screen">
+        <div className="flex min-h-screen" style={{ paddingTop: !user ? '70px' : '0' }}>
           <div className="w-96 p-6 border-r border-gray-700/50 bg-gray-900/50 backdrop-blur-sm animate-slide-in-left">
             <div className="mb-4">
               <h2 className="text-white text-lg font-semibold mb-2 flex items-center gap-2">
@@ -539,7 +613,7 @@ export default function DigitalBusinessCard() {
           </div>
         </div>
       ) : (
-        <div className="flex items-center justify-center p-6 min-h-screen">
+        <div className="flex items-center justify-center p-6 min-h-screen" style={{ paddingTop: !user ? '100px' : '24px' }}>
           <div className="w-full max-w-sm">
             <Card
               ref={cardRef as React.RefObject<HTMLDivElement>}
@@ -599,5 +673,6 @@ export default function DigitalBusinessCard() {
         </div>
       )}
     </div>
+    </AuthRedirect>
   )
 }
