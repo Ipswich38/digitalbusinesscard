@@ -17,40 +17,70 @@ export default function SignIn() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const [clientError, setClientError] = useState('')
   const router = useRouter()
-  const supabase = createClient()
+  
+  // Try to create Supabase client with error handling
+  let supabase: any = null
+  try {
+    supabase = createClient()
+  } catch (err: any) {
+    if (!clientError) {
+      setClientError(err.message)
+    }
+  }
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    if (!supabase) {
+      setError('Authentication service is not available. Please check configuration.')
+      return
+    }
+    
     setLoading(true)
     setError('')
     setMessage('')
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
-    if (error) {
-      setError(error.message)
-    } else {
-      setMessage('Success! Redirecting to dashboard...')
-      router.push('/dashboard')
+      if (error) {
+        setError(error.message)
+      } else {
+        setMessage('Success! Redirecting to dashboard...')
+        router.push('/dashboard')
+      }
+    } catch (err: any) {
+      setError(err.message || 'An unexpected error occurred')
     }
     setLoading(false)
   }
 
   const handleGoogleSignIn = async () => {
+    if (!supabase) {
+      setError('Authentication service is not available. Please check configuration.')
+      return
+    }
+    
     setLoading(true)
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/dashboard`,
-      },
-    })
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
+        },
+      })
 
-    if (error) {
-      setError(error.message)
+      if (error) {
+        setError(error.message)
+        setLoading(false)
+      }
+    } catch (err: any) {
+      setError(err.message || 'An unexpected error occurred')
       setLoading(false)
     }
   }
@@ -136,10 +166,15 @@ export default function SignIn() {
             </form>
 
             {/* Messages */}
-            {error && (
+            {(error || clientError) && (
               <Alert className="border-red-600 bg-red-900/20">
                 <AlertDescription className="text-red-400">
-                  {error}
+                  {error || clientError}
+                  {clientError && (
+                    <div className="mt-2 text-xs text-gray-500">
+                      This usually means environment variables are not configured properly.
+                    </div>
+                  )}
                 </AlertDescription>
               </Alert>
             )}
