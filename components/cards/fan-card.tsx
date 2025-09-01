@@ -4,7 +4,16 @@ import React from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Star, Heart, Calendar, Award, Music, Tv, Trophy, Sparkles, ExternalLink } from 'lucide-react'
-import { motion } from 'framer-motion'
+
+// Optional animation wrapper
+let motion: any
+try {
+  motion = require('framer-motion').motion
+} catch {
+  motion = {
+    div: ({ children, whileHover, animate, transition, ...props }: any) => <div {...props}>{children}</div>
+  }
+}
 
 interface FanCardData {
   subject: string // The idol/person/character being featured

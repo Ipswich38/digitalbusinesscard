@@ -4,7 +4,16 @@ import React from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Laugh, Share, Heart, MessageCircle, Download, Zap } from 'lucide-react'
-import { motion } from 'framer-motion'
+
+// Optional animation wrapper
+let motion: any
+try {
+  motion = require('framer-motion').motion
+} catch {
+  motion = {
+    div: ({ children, whileHover, animate, transition, ...props }: any) => <div {...props}>{children}</div>
+  }
+}
 
 interface MemeCardData {
   title: string

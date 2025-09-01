@@ -1,7 +1,19 @@
 "use client"
 
 import { useState } from 'react'
-import { motion } from 'framer-motion'
+
+// Optional animation wrapper - fallback if framer-motion not available
+let motion: any
+try {
+  motion = require('framer-motion').motion
+} catch {
+  // Fallback to regular div if framer-motion not available
+  motion = {
+    div: ({ children, whileHover, whileTap, transition, initial, animate, ...props }: any) => (
+      <div {...props}>{children}</div>
+    )
+  }
+}
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
