@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { createClient } from '@/lib/supabase'
+// TODO: Re-add database functionality when authentication is implemented
 import { BusinessCard } from '@/components/business-card'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Share, QrCode } from 'lucide-react'
@@ -34,20 +34,9 @@ export default function PublicCardPage() {
 
   const fetchCard = async () => {
     try {
-      const supabase = createClient()
-      
-      const { data, error } = await supabase
-        .from('business_cards')
-        .select('*')
-        .eq('slug', slug)
-        .eq('is_active', true)
-        .single()
-
-      if (error || !data) {
-        setNotFound(true)
-      } else {
-        setCard(data)
-      }
+      // TODO: Re-implement card fetching when database is available
+      // For now, show not found for all dynamic routes
+      setNotFound(true)
     } catch (error) {
       console.error('Error fetching card:', error)
       setNotFound(true)
@@ -58,16 +47,8 @@ export default function PublicCardPage() {
 
   const trackView = async () => {
     try {
-      await fetch('/api/analytics/track', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          slug,
-          action: 'view',
-        }),
-      })
+      // TODO: Re-implement analytics tracking when API is available
+      console.log('Card view tracked:', slug)
     } catch (error) {
       console.error('Error tracking view:', error)
     }
@@ -75,16 +56,8 @@ export default function PublicCardPage() {
 
   const trackClick = async (action: string) => {
     try {
-      await fetch('/api/analytics/track', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          slug,
-          action,
-        }),
-      })
+      // TODO: Re-implement analytics tracking when API is available
+      console.log('Click tracked:', action, slug)
     } catch (error) {
       console.error('Error tracking click:', error)
     }
@@ -171,9 +144,9 @@ export default function PublicCardPage() {
           <p className="text-gray-400 mb-4">
             Create your own digital business card
           </p>
-          <Link href="/auth/signup">
+          <Link href="/">
             <Button className="bg-orange-600 hover:bg-orange-700 w-full">
-              Get Started Free
+              Create Your Own Card
             </Button>
           </Link>
         </div>

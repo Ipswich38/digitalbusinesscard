@@ -1,8 +1,6 @@
 const CACHE_NAME = 'digital-business-card-v1'
 const urlsToCache = [
   '/',
-  '/dashboard',
-  '/create',
   '/static/js/bundle.js',
   '/static/css/main.css',
   '/manifest.json'

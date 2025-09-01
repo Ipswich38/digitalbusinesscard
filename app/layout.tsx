@@ -1,7 +1,6 @@
 import type React from "react"
 import type { Metadata } from "next"
 import { ThemeProvider } from "@/components/theme-provider"
-import { AuthProvider } from "@/components/providers"
 import "./globals.css"
 
 export const metadata: Metadata = {
@@ -47,11 +46,9 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="DBCard Pro" />
       </head>
       <body>
-        <AuthProvider>
-          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
-            {children}
-          </ThemeProvider>
-        </AuthProvider>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+          {children}
+        </ThemeProvider>
         <script
           dangerouslySetInnerHTML={{
             __html: `

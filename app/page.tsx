@@ -1,8 +1,6 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { AuthRedirect } from "@/components/auth-redirect"
-import { useAuth } from "@/components/providers"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Lock, Unlock, Eye, Download, ArrowLeft, ArrowRight, Sparkles, CheckCircle, Zap } from "lucide-react"
@@ -28,7 +26,6 @@ const FORM_STEPS = [
 ]
 
 export default function DigitalBusinessCard() {
-  const { user } = useAuth()
   const [selectedCategory, setSelectedCategory] = useState<CardCategory>('business')
   const [showCategorySelector, setShowCategorySelector] = useState(true)
   const [isLocked, setIsLocked] = useState(true)
@@ -210,50 +207,7 @@ export default function DigitalBusinessCard() {
 
   const handleSave = async () => {
     if (userData.firstName.trim() && userData.mobile.trim()) {
-      // If user is authenticated, save to database
-      if (user) {
-        try {
-          const response = await fetch('/api/cards', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              title: `${userData.firstName}'s ${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)} Card`,
-              category: selectedCategory,
-              theme_id: getCategoryById(selectedCategory).themes[0]?.id,
-              data: userData,
-            }),
-          })
-
-          if (!response.ok) {
-            const errorData = await response.json()
-            if (response.status === 403) {
-              // Free plan limit reached
-              alert(errorData.error || 'Free plan limited to 1 card. Please upgrade to create more.')
-              return
-            }
-            throw new Error(errorData.error || 'Failed to save card')
-          }
-
-          const result = await response.json()
-          console.log('Card saved successfully:', result)
-          
-          // Redirect to dashboard to see the saved card
-          window.location.href = '/dashboard'
-          return
-        } catch (error) {
-          console.error('Error saving card:', error)
-          alert('Failed to save card. Please try again.')
-          return
-        }
-      } else {
-        // Show signup prompt for non-authenticated users
-        if (confirm('Sign up to save your card and get a permanent URL with QR code. Continue to create account?')) {
-          window.location.href = '/auth/signup'
-          return
-        }
-      }
+      // TODO: Add authentication and card saving functionality
 
       setHasData(true)
       setIsLocked(true)
@@ -432,21 +386,7 @@ export default function DigitalBusinessCard() {
                 Create your account to save and share your digital cards permanently
               </span>
               <div className="flex gap-3">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-white border-white/30 hover:bg-white/10 text-xs"
-                  onClick={() => window.location.href = '/auth/signin'}
-                >
-                  Sign In
-                </Button>
-                <Button
-                  size="sm"
-                  className="bg-white text-orange-600 hover:bg-gray-100 text-xs font-semibold"
-                  onClick={() => window.location.href = '/auth/signup'}
-                >
-                  Get Started Free
-                </Button>
+                {/* TODO: Add authentication buttons when auth is implemented */}
               </div>
             </div>
           </div>
@@ -475,21 +415,7 @@ export default function DigitalBusinessCard() {
                 Create your account to save and share your digital business card permanently
               </span>
               <div className="flex gap-3">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-white border-white/30 hover:bg-white/10 text-xs"
-                  onClick={() => window.location.href = '/auth/signin'}
-                >
-                  Sign In
-                </Button>
-                <Button
-                  size="sm"
-                  className="bg-white text-orange-600 hover:bg-gray-100 text-xs font-semibold"
-                  onClick={() => window.location.href = '/auth/signup'}
-                >
-                  Get Started Free
-                </Button>
+                {/* TODO: Add authentication buttons when auth is implemented */}
               </div>
             </div>
           </div>

@@ -79,15 +79,8 @@
       "name": "Create Card",
       "short_name": "Create",
       "description": "Create a new business card",
-      "url": "/create",
+      "url": "/",
       "icons": [{ "src": "/icons/create-shortcut.png", "sizes": "96x96" }]
-    },
-    {
-      "name": "Dashboard",
-      "short_name": "Dashboard",
-      "description": "View your cards and analytics",
-      "url": "/dashboard",
-      "icons": [{ "src": "/icons/dashboard-shortcut.png", "sizes": "96x96" }]
     }
   ]
 }
