@@ -13,11 +13,9 @@ import { ArrowLeft, CreditCard, AlertTriangle } from "lucide-react"
 import { useEffect } from 'react'
 
 export default function SignUpPage() {
-  const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [plan, setPlan] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [supabaseConfigured, setSupabaseConfigured] = useState<boolean | null>(null)
@@ -52,10 +50,6 @@ export default function SignUpPage() {
       return
     }
 
-    if (!plan) {
-      setError('Please select a plan')
-      return
-    }
 
     setLoading(true)
 
@@ -72,13 +66,7 @@ export default function SignUpPage() {
       // Sign up with Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-            plan: plan
-          }
-        }
+        password
       })
 
       if (authError) {
@@ -146,19 +134,6 @@ export default function SignUpPage() {
               </div>
             )}
             <form onSubmit={handleSignUp} className="space-y-4">
-              {/* Full Name */}
-              <div className="space-y-2">
-                <Label htmlFor="fullName">Full Name</Label>
-                <Input
-                  id="fullName"
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  required
-                  placeholder="Enter your full name"
-                />
-              </div>
-
               {/* Email */}
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
@@ -172,21 +147,6 @@ export default function SignUpPage() {
                 />
               </div>
 
-              {/* Plan Selection */}
-              <div className="space-y-2">
-                <Label htmlFor="plan">Select Plan</Label>
-                <Select onValueChange={setPlan} required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose your plan" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="free">Free - 3 Cards</SelectItem>
-                    <SelectItem value="pro">Pro - $9/month</SelectItem>
-                    <SelectItem value="enterprise">Enterprise - $29/month</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
               {/* Password */}
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
@@ -196,7 +156,7 @@ export default function SignUpPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  placeholder="Create a password"
+                  placeholder="Create a password (min 6 characters)"
                   minLength={6}
                 />
               </div>

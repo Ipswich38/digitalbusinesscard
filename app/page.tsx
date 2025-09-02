@@ -3,12 +3,12 @@
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Lock, Unlock, Eye, Download, ArrowLeft, ArrowRight, Sparkles, CheckCircle, Zap } from "lucide-react"
+import { Lock, Unlock, Eye, Download, ArrowLeft, ArrowRight, Sparkles, CheckCircle, Zap, CreditCard } from "lucide-react"
 import QRCodeLib from "qrcode"
 
 import type { UserData } from "@/components/business-card/types"
-import { CategorySelector } from "@/components/category-selector"
-import { getAllCardCategories, type CardCategory, getCategoryById } from "@/lib/card-categories"
+import { type CardCategory } from "@/lib/card-categories"
+import { TemplateCarousel } from "@/components/template-carousel"
 import { LivePreview } from "@/components/business-card/live-preview"
 import { CardPreview } from "@/components/business-card/card-preview"
 import { OnboardingWelcome } from "@/components/business-card/onboarding-welcome"
@@ -16,7 +16,6 @@ import { IdentityForm } from "@/components/business-card/form-sections/identity-
 import { SocialForm } from "@/components/business-card/form-sections/social-form"
 import { CustomizationForm } from "@/components/business-card/form-sections/customization-form"
 import { BackContentForm } from "@/components/business-card/form-sections/back-content-form"
-import { CardHistoryPanel } from "@/components/business-card/card-history-panel"
 
 const FORM_STEPS = [
   { id: "identity", title: "Identity", description: "Your basic info", component: IdentityForm, icon: "👤" },
@@ -25,17 +24,14 @@ const FORM_STEPS = [
   { id: "back-content", title: "Showcase", description: "Portfolio & more", component: BackContentForm, icon: "⭐" },
 ]
 
-export default function DigitalBusinessCard() {
+type AppState = "welcome" | "templates" | "editing" | "preview"
+
+export default function OnePageDigitalCard() {
+  const [appState, setAppState] = useState<AppState>("welcome")
   const [selectedCategory, setSelectedCategory] = useState<CardCategory>('business')
-  const [showCategorySelector, setShowCategorySelector] = useState(true)
-  const [isLocked, setIsLocked] = useState(true)
-  const [unlockCode, setUnlockCode] = useState("")
-  const [currentView, setCurrentView] = useState<"qr" | "business">("qr")
   const [currentStep, setCurrentStep] = useState(0)
-  const [showWelcome, setShowWelcome] = useState(true)
   const [completedSteps, setCompletedSteps] = useState<number[]>([])
   const [showSuccess, setShowSuccess] = useState(false)
-  const [isHistoryPanelOpen, setIsHistoryPanelOpen] = useState(false)
   const [userData, setUserData] = useState<UserData>({
     firstName: "",
     title: "",
@@ -68,36 +64,12 @@ export default function DigitalBusinessCard() {
       portfolio: {
         enabled: false,
         projects: [],
-        analytics: {
-          enabled: false,
-          trackViews: false,
-          trackClicks: false,
-          showMetrics: false,
-        },
-        displayOptions: {
-          layout: "grid",
-          showTechStack: false,
-          showMetrics: false,
-          showClientName: false,
-          sortBy: "date",
-        },
+        analytics: { enabled: false, trackViews: false, trackClicks: false, showMetrics: false },
+        displayOptions: { layout: "grid", showTechStack: false, showMetrics: false, showClientName: false, sortBy: "date" },
       },
-      testimonials: {
-        enabled: false,
-        items: [],
-      },
-      services: {
-        enabled: false,
-        items: [],
-      },
-      additionalInfo: {
-        enabled: false,
-        bio: "",
-        achievements: [],
-        certifications: [],
-        skills: [],
-        experience: [],
-      },
+      testimonials: { enabled: false, items: [] },
+      services: { enabled: false, items: [] },
+      additionalInfo: { enabled: false, bio: "", achievements: [], certifications: [], skills: [], experience: [] },
     },
     analytics: {
       enabled: false,
@@ -106,266 +78,64 @@ export default function DigitalBusinessCard() {
       contactClicks: Math.floor(Math.random() * 200) + 20,
       socialClicks: Math.floor(Math.random() * 300) + 30,
       lastViewed: new Date().toISOString(),
-      popularSections: {
-        contact: Math.floor(Math.random() * 100) + 50,
-        portfolio: Math.floor(Math.random() * 80) + 30,
-        social: Math.floor(Math.random() * 60) + 20,
-      },
+      popularSections: { contact: Math.floor(Math.random() * 100) + 50, portfolio: Math.floor(Math.random() * 80) + 30, social: Math.floor(Math.random() * 60) + 20 },
     },
   })
   const [qrCodeUrl, setQrCodeUrl] = useState("")
-  const [hasData, setHasData] = useState(false)
+  const [currentView, setCurrentView] = useState<"qr" | "business">("qr")
   const cardRef = useRef<HTMLDivElement>(null)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
 
-  const [showLivePreview, setShowLivePreview] = useState(false)
-
+  // QR code generation
   useEffect(() => {
-    const code = Math.random().toString(36).substring(2, 8).toUpperCase()
-    setUnlockCode(code)
-  }, [])
-
-  // QR code generation - this creates a preview QR for demo purposes
-  useEffect(() => {
-    if (hasData || (userData.firstName.trim() && userData.mobile.trim())) {
+    if (userData.firstName.trim()) {
       const demoSlug = `${userData.firstName.toLowerCase().replace(/\s+/g, '-')}-demo`
       const businessCardUrl = `${window.location.origin}/${demoSlug}`
       QRCodeLib.toDataURL(businessCardUrl, {
-        color: {
-          dark: "#ea580c",
-          light: "#ffffff",
-        },
+        color: { dark: "#ea580c", light: "#ffffff" },
         width: 200,
         margin: 2,
         errorCorrectionLevel: "M",
       }).then(setQrCodeUrl)
     }
-  }, [userData, hasData])
+  }, [userData])
 
+  // Check authentication status
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search)
-    const view = urlParams.get("view")
-    const data = urlParams.get("data")
-    const id = urlParams.get("id")
-
-    if (view === "business") {
-      try {
-        let parsedData
-        if (data) {
-          parsedData = JSON.parse(decodeURIComponent(data))
-        } else if (id) {
-          const storedData = localStorage.getItem(`card_${id}`)
-          if (storedData) {
-            parsedData = JSON.parse(storedData)
-          } else {
-            console.error("Business card data not found")
-            return
-          }
-        }
-        if (parsedData) {
-          setUserData(parsedData)
-          setCurrentView("business")
-          setHasData(true)
-          setIsLocked(true)
-          setShowWelcome(false)
-        }
-      } catch (error) {
-        console.error("Error parsing business card data:", error)
-      }
-    }
-  }, [])
-
-  const handleStartOnboarding = () => {
-    setShowWelcome(false)
-    setShowCategorySelector(true)
-  }
-
-  const handleCategorySelect = (category: CardCategory) => {
-    setSelectedCategory(category)
-    setShowCategorySelector(false)
-    setIsLocked(false) 
-    setShowLivePreview(true)
-    
-    // Apply category-specific defaults
-    const categoryConfig = getCategoryById(category)
-    const defaultTheme = categoryConfig.themes[0]
-    
-    if (defaultTheme) {
-      setUserData(prev => ({
-        ...prev,
-        backgroundColor: defaultTheme.backgroundColor,
-        backgroundGradient: defaultTheme.backgroundGradient,
-        textColor: defaultTheme.textColor,
-        useGradient: true
-      }))
-    }
-  }
-
-  const handleUnlock = () => {
-    setIsLocked(false)
-    setShowLivePreview(true)
-  }
-
-  const handleSave = async () => {
-    if (userData.firstName.trim() && userData.mobile.trim()) {
-      // Check if user is authenticated - redirect to signup if not
+    const checkAuth = async () => {
       try {
         const { getSupabaseClient } = await import('@/lib/supabase')
         const supabase = getSupabaseClient()
-        
-        if (!supabase) {
-          // No Supabase available, redirect to signup
-          if (confirm('Sign up to save your card and get a permanent URL with QR code. Continue to create account?')) {
-            window.location.href = '/auth/sign-up'
-            return
-          }
-        }
-        
-        const { data: { user } } = await supabase.auth.getUser()
-        
-        if (!user) {
-          // Redirect to signup if not authenticated
-          if (confirm('Sign up to save your card and get a permanent URL with QR code. Continue to create account?')) {
-            window.location.href = '/auth/sign-up'
-            return
-          }
-        } else {
-          // User is authenticated - save card (implement card saving later)
-          alert('Card saving functionality will be implemented with database integration.')
+        if (supabase) {
+          const { data: { user } } = await supabase.auth.getUser()
+          setIsAuthenticated(!!user)
         }
       } catch (error) {
-        console.error('Auth check error:', error)
-        // Fallback to signup flow
-        if (confirm('Sign up to save your card and get a permanent URL with QR code. Continue to create account?')) {
-          window.location.href = '/auth/sign-up'
-          return
-        }
+        console.log('Auth check failed:', error)
       }
-
-      setHasData(true)
-      setIsLocked(true)
-      setShowLivePreview(false)
-      setShowSuccess(true)
-
-      const createConfetti = (delay: number) => {
-        setTimeout(() => {
-          const confetti = document.createElement("div")
-          confetti.innerHTML = "🎉"
-          confetti.style.position = "fixed"
-          confetti.style.top = "50%"
-          confetti.style.left = "50%"
-          confetti.style.fontSize = "3rem"
-          confetti.style.zIndex = "9999"
-          confetti.style.pointerEvents = "none"
-          confetti.style.animation = "confetti 2s ease-out forwards"
-          document.body.appendChild(confetti)
-
-          setTimeout(() => {
-            document.body.removeChild(confetti)
-          }, 2000)
-        }, delay)
-      }
-
-      createConfetti(0)
-      createConfetti(300)
-      createConfetti(600)
-
-      setTimeout(() => setShowSuccess(false), 3000)
     }
+    checkAuth()
+  }, [])
+
+  const handleTemplateSelect = (category: CardCategory, templateData: UserData) => {
+    setSelectedCategory(category)
+    setUserData(templateData)
+    setAppState("editing")
+    setCurrentStep(0)
   }
 
   const handleInputChange = (field: keyof UserData, value: string | boolean | any) => {
     setUserData((prev) => ({ ...prev, [field]: value }))
   }
 
-  const getSocialMediaOptions = () => {
-    const options = []
-    if (userData.linkedin) options.push({ value: "linkedin", label: "LinkedIn", url: userData.linkedin })
-    if (userData.x) options.push({ value: "x", label: "X (Twitter)", url: userData.x })
-    if (userData.threads) options.push({ value: "threads", label: "Threads", url: userData.threads })
-    if (userData.facebook) options.push({ value: "facebook", label: "Facebook", url: userData.facebook })
-    if (userData.instagram) options.push({ value: "instagram", label: "Instagram", url: userData.instagram })
-    if (userData.tiktok) options.push({ value: "tiktok", label: "TikTok", url: userData.tiktok })
-    return options
-  }
-
-  const getSelectedSocialUrl = () => {
-    const socialOptions = getSocialMediaOptions()
-    const selected = socialOptions.find((option) => option.value === userData.selectedSocial)
-    return selected?.url || ""
-  }
-
-  const toggleView = () => {
-    setCurrentView(currentView === "qr" ? "business" : "qr")
-  }
-
-  const downloadAsPNG = async () => {
-    if (!cardRef.current || !hasData) return
-
-    try {
-      const html2canvas = (await import("html2canvas")).default
-
-      const originalElement = cardRef.current
-      const clone = originalElement.cloneNode(true) as HTMLElement
-
-      const applyComputedStyles = (original: Element, cloned: Element) => {
-        const computedStyle = window.getComputedStyle(original)
-        const clonedElement = cloned as HTMLElement
-
-        for (let i = 0; i < computedStyle.length; i++) {
-          const property = computedStyle[i]
-          let value = computedStyle.getPropertyValue(property)
-
-          // Convert OKLCH colors to RGB for html2canvas compatibility
-          if (value.includes("oklch") || value.includes("oklab")) {
-            // Create a temporary element to get the computed RGB value
-            const tempDiv = document.createElement("div")
-            tempDiv.style.color = value
-            document.body.appendChild(tempDiv)
-            const rgbValue = window.getComputedStyle(tempDiv).color
-            document.body.removeChild(tempDiv)
-            value = rgbValue
-          }
-
-          clonedElement.style.setProperty(property, value)
-        }
-
-        for (let i = 0; i < original.children.length; i++) {
-          applyComputedStyles(original.children[i], cloned.children[i])
-        }
-      }
-
-      clone.style.position = "absolute"
-      clone.style.left = "-9999px"
-      clone.style.top = "-9999px"
-      document.body.appendChild(clone)
-
-      applyComputedStyles(originalElement, clone)
-
-      const canvas = await html2canvas(clone, {
-        backgroundColor: null,
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        width: originalElement.offsetWidth,
-        height: originalElement.offsetHeight,
-      })
-
-      document.body.removeChild(clone)
-
-      const link = document.createElement("a")
-      link.download = `${userData.firstName.toLowerCase()}-business-card.png`
-      link.href = canvas.toDataURL("image/png")
-      link.click()
-    } catch (error) {
-      console.error("Error generating PNG:", error)
-    }
+  const canProceed = () => {
+    if (currentStep === 0) return userData.firstName.trim() && userData.title.trim()
+    return true
   }
 
   const nextStep = () => {
-    if (currentStep < FORM_STEPS.length - 1) {
-      if (!completedSteps.includes(currentStep)) {
-        setCompletedSteps([...completedSteps, currentStep])
-      }
+    if (canProceed() && currentStep < FORM_STEPS.length - 1) {
+      setCompletedSteps([...new Set([...completedSteps, currentStep])])
       setCurrentStep(currentStep + 1)
     }
   }
@@ -376,266 +146,253 @@ export default function DigitalBusinessCard() {
     }
   }
 
-  const canProceed = () => {
-    if (currentStep === 0) {
-      return userData.firstName.trim() && userData.mobile.trim()
+  const handleFinish = () => {
+    setAppState("preview")
+    setShowSuccess(true)
+    setTimeout(() => setShowSuccess(false), 3000)
+  }
+
+  const handleSaveToAccount = async () => {
+    if (!isAuthenticated) {
+      if (confirm('Create a free account to save your card permanently and get analytics. Continue?')) {
+        window.location.href = '/auth/sign-up'
+      }
+      return
     }
-    return true
-  }
 
-  const handleFlipCard = () => {
-    setUserData((prev) => ({
-      ...prev,
-      cardSide: prev.cardSide === "front" ? "back" : "front",
-    }))
-  }
+    // Save to database for authenticated users
+    try {
+      const response = await fetch('/api/cards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: `${userData.firstName}'s Card`,
+          data: userData,
+        }),
+      })
 
-  const handleLoadCard = (loadedUserData: UserData) => {
-    setUserData(loadedUserData)
-    setHasData(true)
-    setIsHistoryPanelOpen(false)
-    if (isLocked) {
-      setCurrentView("business")
+      if (response.ok) {
+        const result = await response.json()
+        alert(`Card saved! Share it at: ${result.url}`)
+      } else {
+        throw new Error('Failed to save card')
+      }
+    } catch (error) {
+      console.error('Save error:', error)
+      alert('Failed to save card. Please try again.')
     }
   }
 
-  const toggleHistoryPanel = () => {
-    setIsHistoryPanelOpen(!isHistoryPanelOpen)
+  const handlePayPerUse = async () => {
+    try {
+      const response = await fetch('/api/payment/create-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cardData: userData,
+          userEmail: userData.email || null,
+        }),
+      })
+
+      const { url, sessionId, message } = await response.json()
+      
+      if (url) {
+        window.location.href = url
+      } else {
+        console.log('Payment demo:', message)
+        // For demo purposes, go directly to success page
+        window.location.href = `/download-success?session_id=${sessionId}&demo=true`
+      }
+    } catch (error) {
+      console.error('Payment error:', error)
+      alert('Payment processing failed. Please try again.')
+    }
   }
 
-  if (showWelcome) {
-    return <OnboardingWelcome onStart={handleStartOnboarding} />
+  const downloadAsPNG = async () => {
+    if (!cardRef.current) return
+
+    try {
+      const html2canvas = (await import("html2canvas")).default
+      const canvas = await html2canvas(cardRef.current)
+      const link = document.createElement("a")
+      link.download = `${userData.firstName || 'digital-card'}-business-card.png`
+      link.href = canvas.toDataURL()
+      link.click()
+    } catch (error) {
+      console.error('Download failed:', error)
+    }
   }
 
-  if (showCategorySelector) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-900" style={{ paddingTop: !user ? '70px' : '0' }}>
-        {/* Sign Up CTA for non-authenticated users */}
-        {!user && (
-          <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-orange-600 to-orange-500 text-white p-3 text-center">
-            <div className="max-w-4xl mx-auto flex items-center justify-between">
-              <span className="text-sm font-medium">
-                Create your account to save and share your digital cards permanently
-              </span>
-              <div className="flex gap-3">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-white border-white/30 hover:bg-white/10 text-xs"
-                  onClick={() => window.location.href = '/auth/login'}
-                >
-                  Sign In
-                </Button>
-                <Button
-                  size="sm"
-                  className="bg-white text-orange-600 hover:bg-gray-100 text-xs font-semibold"
-                  onClick={() => window.location.href = '/auth/sign-up'}
-                >
-                  Get Started Free
-                </Button>
-              </div>
+  const toggleView = () => {
+    setCurrentView(currentView === "qr" ? "business" : "qr")
+  }
+
+  // Render different states
+  const renderWelcome = () => (
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="max-w-4xl w-full text-center">
+        <div className="mb-8">
+          <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
+            Create Your
+            <span className="bg-gradient-to-r from-orange-400 to-orange-600 bg-clip-text text-transparent block">
+              Digital Card
+            </span>
+          </h1>
+          <p className="text-xl text-gray-300 max-w-2xl mx-auto mb-8">
+            Professional digital business cards in minutes. No design skills needed. 
+            Choose a template, customize, and share instantly.
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-6 mb-12">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Sparkles className="h-8 w-8 text-white" />
             </div>
+            <h3 className="text-lg font-semibold text-white mb-2">Choose Template</h3>
+            <p className="text-gray-400">Pick from professional templates</p>
           </div>
-        )}
+          
+          <div className="text-center">
+            <div className="w-16 h-16 bg-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Eye className="h-8 w-8 text-white" />
+            </div>
+            <h3 className="text-lg font-semibold text-white mb-2">Customize</h3>
+            <p className="text-gray-400">Make it uniquely yours</p>
+          </div>
+          
+          <div className="text-center">
+            <div className="w-16 h-16 bg-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Download className="h-8 w-8 text-white" />
+            </div>
+            <h3 className="text-lg font-semibold text-white mb-2">Share</h3>
+            <p className="text-gray-400">Download or save to account</p>
+          </div>
+        </div>
 
-        <div className="container mx-auto px-4 py-12">
-          <CategorySelector
-            selectedCategory={selectedCategory}
-            onCategorySelect={handleCategorySelect}
-          />
+        <Button
+          onClick={() => setAppState("templates")}
+          size="lg"
+          className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-12 py-4 text-lg rounded-xl font-semibold transition-all duration-200 hover:scale-105 hover:shadow-lg"
+        >
+          Get Started Free
+        </Button>
+      </div>
+    </div>
+  )
+
+  const renderTemplates = () => (
+    <div className="min-h-screen">
+      <div className="container mx-auto">
+        <TemplateCarousel onTemplateSelect={handleTemplateSelect} />
+        
+        <div className="text-center mt-8">
+          <Button
+            onClick={() => setAppState("welcome")}
+            variant="ghost"
+            className="text-gray-400 hover:text-white"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Home
+          </Button>
         </div>
       </div>
-    )
-  }
+    </div>
+  )
 
-  const CurrentFormComponent = FORM_STEPS[currentStep].component
+  const renderEditing = () => {
+    const CurrentStepComponent = FORM_STEPS[currentStep]?.component
 
-  return (
-    <AuthRedirect>
-      <div className="min-h-screen bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-900 relative">
-        {/* Sign Up CTA for non-authenticated users */}
-        {!user && (
-          <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-orange-600 to-orange-500 text-white p-3 text-center">
-            <div className="max-w-4xl mx-auto flex items-center justify-between">
-              <span className="text-sm font-medium">
-                Create your account to save and share your digital business card permanently
-              </span>
-              <div className="flex gap-3">
+    return (
+      <div className="min-h-screen">
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-7xl mx-auto">
+            {/* Progress Header */}
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-6">
                 <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-white border-white/30 hover:bg-white/10 text-xs"
-                  onClick={() => window.location.href = '/auth/login'}
+                  onClick={() => setAppState("templates")}
+                  variant="ghost"
+                  className="text-gray-400 hover:text-white"
                 >
-                  Sign In
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Choose Different Template
                 </Button>
-                <Button
-                  size="sm"
-                  className="bg-white text-orange-600 hover:bg-gray-100 text-xs font-semibold"
-                  onClick={() => window.location.href = '/auth/sign-up'}
-                >
-                  Get Started Free
-                </Button>
+                
+                <div className="text-center">
+                  <h2 className="text-2xl font-bold text-white mb-2">
+                    Customize Your {selectedCategory} Card
+                  </h2>
+                  <p className="text-gray-400">
+                    Step {currentStep + 1} of {FORM_STEPS.length}: {FORM_STEPS[currentStep]?.title}
+                  </p>
+                </div>
+                
+                <div className="w-20"></div>
+              </div>
+
+              {/* Progress Steps */}
+              <div className="flex justify-center space-x-4 mb-8">
+                {FORM_STEPS.map((step, index) => (
+                  <div key={step.id} className="flex items-center">
+                    <div className={`
+                      w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-200
+                      ${index === currentStep 
+                        ? "bg-orange-600 text-white shadow-lg" 
+                        : completedSteps.includes(index)
+                        ? "bg-green-600 text-white"
+                        : "bg-gray-700 text-gray-300"
+                      }
+                    `}>
+                      {completedSteps.includes(index) ? (
+                        <CheckCircle className="h-5 w-5" />
+                      ) : (
+                        index + 1
+                      )}
+                    </div>
+                    {index < FORM_STEPS.length - 1 && (
+                      <div className={`
+                        w-16 h-1 mx-2 rounded transition-all duration-200
+                        ${completedSteps.includes(index) ? "bg-green-600" : "bg-gray-700"}
+                      `} />
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
-          </div>
-        )}
-      <CardHistoryPanel
-        isOpen={isHistoryPanelOpen}
-        onToggle={toggleHistoryPanel}
-        currentUserData={userData}
-        onLoadCard={handleLoadCard}
-      />
 
-      {showSuccess && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="bg-gray-800 rounded-2xl p-8 text-center space-y-4 animate-bounce">
-            <CheckCircle className="h-16 w-16 text-green-400 mx-auto" />
-            <h3 className="text-2xl font-bold text-white">Card Created Successfully!</h3>
-            <p className="text-gray-300">Your digital business card is ready to share</p>
-          </div>
-        </div>
-      )}
+            {/* Main Content */}
+            <div className="grid lg:grid-cols-2 gap-8">
+              {/* Form Section */}
+              <div className="space-y-6">
+                <Card className="bg-gray-800/50 border-gray-700">
+                  <CardContent className="p-6">
+                    <div className="mb-6">
+                      <h3 className="text-xl font-semibold text-white mb-2 flex items-center gap-2">
+                        <span className="text-2xl">{FORM_STEPS[currentStep]?.icon}</span>
+                        {FORM_STEPS[currentStep]?.title}
+                      </h3>
+                      <p className="text-gray-400">{FORM_STEPS[currentStep]?.description}</p>
+                    </div>
 
-      <style jsx global>{`
-        @keyframes confetti {
-          0% {
-            transform: translate(-50%, -50%) scale(0) rotate(0deg);
-            opacity: 1;
-          }
-          50% {
-            transform: translate(-50%, -50%) scale(1.5) rotate(180deg);
-            opacity: 1;
-          }
-          100% {
-            transform: translate(-50%, -50%) scale(0) rotate(360deg);
-            opacity: 0;
-          }
-        }
-        @keyframes slideInRight {
-          from {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
-        }
-        @keyframes slideInLeft {
-          from {
-            transform: translateX(-100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
-        }
-        .animate-slide-in-right {
-          animation: slideInRight 0.5s ease-out;
-        }
-        .animate-slide-in-left {
-          animation: slideInLeft 0.5s ease-out;
-        }
-      `}</style>
-
-      {showLivePreview && !isLocked ? (
-        <div className="flex min-h-screen" style={{ paddingTop: !user ? '70px' : '0' }}>
-          <div className="w-96 p-6 border-r border-gray-700/50 bg-gray-900/50 backdrop-blur-sm animate-slide-in-left">
-            <div className="mb-4">
-              <h2 className="text-white text-lg font-semibold mb-2 flex items-center gap-2">
-                <Zap className="h-5 w-5 text-orange-400" />
-                Live Preview
-              </h2>
-              <p className="text-gray-400 text-sm">Watch the magic happen in real-time</p>
-            </div>
-            <LivePreview
-              userData={userData}
-              currentView={currentView}
-              qrCodeUrl={qrCodeUrl}
-              hasData={hasData || Boolean(userData.firstName.trim() && userData.mobile.trim())}
-              getSocialMediaOptions={getSocialMediaOptions}
-              getSelectedSocialUrl={getSelectedSocialUrl}
-              onFlipCard={handleFlipCard}
-            />
-
-            <div className="mt-4 flex justify-center">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={toggleView}
-                className="bg-gray-800/50 border-gray-600 text-white hover:bg-gray-700/50 transition-all duration-200 hover:scale-105"
-              >
-                <Eye className="h-4 w-4 mr-2" />
-                {currentView === "qr" ? "Business View" : "QR View"}
-              </Button>
-            </div>
-          </div>
-
-          <div className="flex-1 p-6 overflow-y-auto animate-slide-in-right">
-            <div className="max-w-2xl mx-auto">
-              <div className="mb-8">
-                <div className="flex items-center justify-between mb-4">
-                  <h1 className="text-white text-3xl font-bold">
-                    {currentStep === 0 && "Let's start with the basics"}
-                    {currentStep === 1 && "Connect your social world"}
-                    {currentStep === 2 && "Make it uniquely yours"}
-                    {currentStep === 3 && "Showcase your best work"}
-                  </h1>
-                  <div className="text-gray-400 text-sm">
-                    Step {currentStep + 1} of {FORM_STEPS.length}
-                  </div>
-                </div>
-
-                <div className="mb-6">
-                  <div className="flex gap-2 mb-3">
-                    {FORM_STEPS.map((step, index) => (
-                      <div
-                        key={step.id}
-                        className={`flex-1 h-3 rounded-full transition-all duration-500 ${
-                          index < currentStep || completedSteps.includes(index)
-                            ? "bg-green-500"
-                            : index === currentStep
-                              ? "bg-orange-500"
-                              : "bg-gray-700"
-                        }`}
+                    {CurrentStepComponent && (
+                      <CurrentStepComponent
+                        userData={userData}
+                        onInputChange={handleInputChange}
+                        selectedCategory={selectedCategory}
                       />
-                    ))}
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    {FORM_STEPS.map((step, index) => (
-                      <div key={step.id} className="flex items-center gap-1">
-                        <span className="text-lg">{step.icon}</span>
-                        <span
-                          className={
-                            index <= currentStep || completedSteps.includes(index)
-                              ? "text-orange-400 font-medium"
-                              : "text-gray-400"
-                          }
-                        >
-                          {step.title}
-                        </span>
-                        {completedSteps.includes(index) && <CheckCircle className="h-3 w-3 text-green-400 ml-1" />}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+                    )}
+                  </CardContent>
+                </Card>
 
-              <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700/50 transition-all duration-300 hover:border-gray-600/50">
-                <CurrentFormComponent
-                  userData={userData}
-                  onInputChange={handleInputChange}
-                  getSocialMediaOptions={getSocialMediaOptions}
-                />
-
-                <div className="flex justify-between mt-8">
+                {/* Navigation */}
+                <div className="flex justify-between items-center">
                   <Button
-                    variant="outline"
                     onClick={prevStep}
+                    variant="outline"
+                    className="border-gray-600 text-gray-300 hover:border-gray-500 hover:text-white"
                     disabled={currentStep === 0}
-                    className="bg-gray-800/50 border-gray-600 text-white hover:bg-gray-700/50 disabled:opacity-50 transition-all duration-200 hover:scale-105"
                   >
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Previous
@@ -643,89 +400,194 @@ export default function DigitalBusinessCard() {
 
                   {currentStep === FORM_STEPS.length - 1 ? (
                     <Button
-                      onClick={handleSave}
+                      onClick={handleFinish}
                       className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-8 py-3 rounded-xl font-semibold flex items-center gap-2 transition-all duration-200 hover:scale-105 hover:shadow-lg"
                       disabled={!canProceed()}
                     >
                       <Sparkles className="h-4 w-4" />
-                      Complete Your Card!
+                      Finish Card
                     </Button>
                   ) : (
                     <Button
                       onClick={nextStep}
                       disabled={!canProceed()}
-                      className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 disabled:opacity-50 transition-all duration-200 hover:scale-105"
+                      className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg"
                     >
-                      Continue
+                      Next
                       <ArrowRight className="h-4 w-4 ml-2" />
                     </Button>
                   )}
                 </div>
               </div>
+
+              {/* Live Preview */}
+              <div className="sticky top-8">
+                <Card className="bg-gray-800/50 border-gray-700">
+                  <CardContent className="p-6">
+                    <div className="mb-4 flex justify-between items-center">
+                      <h3 className="text-lg font-semibold text-white">Live Preview</h3>
+                      <Button
+                        onClick={toggleView}
+                        size="sm"
+                        variant="outline"
+                        className="border-gray-600 text-gray-300 hover:border-gray-500"
+                      >
+                        {currentView === "qr" ? "Show QR" : "Show Card"}
+                      </Button>
+                    </div>
+
+                    <div ref={cardRef}>
+                      {currentView === "business" ? (
+                        <LivePreview
+                          userData={userData}
+                          qrCodeUrl={qrCodeUrl}
+                          onInputChange={handleInputChange}
+                        />
+                      ) : (
+                        <CardPreview
+                          userData={userData}
+                          qrCodeUrl={qrCodeUrl}
+                          onInputChange={handleInputChange}
+                        />
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </div>
         </div>
-      ) : (
-        <div className="flex items-center justify-center p-6 min-h-screen" style={{ paddingTop: !user ? '100px' : '24px' }}>
-          <div className="w-full max-w-sm">
-            <Card
-              ref={cardRef as React.RefObject<HTMLDivElement>}
-              className="border-0 rounded-[28px] shadow-2xl overflow-hidden relative backdrop-blur-sm transition-all duration-300 hover:scale-105"
-              style={{
-                background: userData.useGradient ? userData.backgroundGradient : userData.backgroundColor,
-                boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3), 0 2px 16px rgba(0, 0, 0, 0.2)",
-              }}
-            >
-              <CardContent className="p-0">
-                <CardPreview
-                  userData={userData}
-                  currentView={currentView}
-                  qrCodeUrl={qrCodeUrl}
-                  hasData={hasData}
-                  cardRef={cardRef}
-                  getSocialMediaOptions={getSocialMediaOptions}
-                  getSelectedSocialUrl={getSelectedSocialUrl}
-                  onFlipCard={handleFlipCard}
-                />
-              </CardContent>
+      </div>
+    )
+  }
 
-              <div className="absolute bottom-6 right-6 flex gap-3">
-                {hasData && userData.firstName && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={toggleView}
-                    className="text-gray-400 hover:text-white hover:bg-white/10 p-3 h-10 w-10 rounded-full backdrop-blur-sm shadow-lg transition-all duration-200 hover:shadow-xl hover:scale-110"
-                    title={currentView === "qr" ? "View Business Card" : "View QR Card"}
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                )}
-                {hasData && userData.firstName && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={downloadAsPNG}
-                    className="text-gray-400 hover:text-white hover:bg-white/10 p-3 h-10 w-10 rounded-full backdrop-blur-sm shadow-lg transition-all duration-200 hover:shadow-xl hover:scale-110"
-                    title="Download as PNG"
-                  >
-                    <Download className="h-4 w-4" />
-                  </Button>
-                )}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={isLocked ? handleUnlock : () => setIsLocked(true)}
-                  className="text-gray-400 hover:text-white hover:bg-white/10 p-3 h-10 w-10 rounded-full backdrop-blur-sm shadow-lg transition-all duration-200 hover:shadow-xl hover:scale-110"
-                >
-                  {isLocked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
-                </Button>
-              </div>
+  const renderPreview = () => (
+    <div className="min-h-screen">
+      <div className="container mx-auto px-4 py-12">
+        <div className="max-w-4xl mx-auto text-center">
+          <div className="mb-8">
+            <div className="flex items-center justify-center mb-6">
+              {showSuccess && <CheckCircle className="h-16 w-16 text-green-500 animate-pulse" />}
+            </div>
+            <h1 className="text-4xl font-bold text-white mb-4">
+              Your Card is Ready! 🎉
+            </h1>
+            <p className="text-gray-300 text-lg">
+              Your professional digital card is complete. Choose how you'd like to use it:
+            </p>
+          </div>
+
+          {/* Preview Card */}
+          <div className="mb-12">
+            <Card className="max-w-md mx-auto bg-gray-800/50 border-gray-700">
+              <CardContent className="p-6">
+                <div ref={cardRef}>
+                  <LivePreview
+                    userData={userData}
+                    qrCodeUrl={qrCodeUrl}
+                    onInputChange={handleInputChange}
+                  />
+                </div>
+              </CardContent>
             </Card>
+          </div>
+
+          {/* Action Options */}
+          <div className="grid md:grid-cols-2 gap-6 mb-8">
+            {/* Free Account Option */}
+            <Card className="bg-gray-800/50 border-gray-700 hover:border-orange-500 transition-all duration-200">
+              <CardContent className="p-8 text-center">
+                <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Unlock className="h-8 w-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">Save to Free Account</h3>
+                <p className="text-gray-400 mb-6">
+                  • Permanent URL & QR code<br/>
+                  • Access from any device<br/>
+                  • Simple analytics<br/>
+                  • Unlimited edits
+                </p>
+                <Button
+                  onClick={handleSaveToAccount}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {isAuthenticated ? 'Save to Account' : 'Create Free Account'}
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Pay-per-use Option */}
+            <Card className="bg-gray-800/50 border-gray-700 hover:border-orange-500 transition-all duration-200">
+              <CardContent className="p-8 text-center">
+                <div className="w-16 h-16 bg-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <CreditCard className="h-8 w-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">Download Now</h3>
+                <p className="text-gray-400 mb-6">
+                  • Instant PNG download<br/>
+                  • No account needed<br/>
+                  • Print ready<br/>
+                  • One-time payment: $2.99
+                </p>
+                <Button
+                  onClick={handlePayPerUse}
+                  className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+                >
+                  Pay & Download
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Back to Edit */}
+          <Button
+            onClick={() => setAppState("editing")}
+            variant="ghost"
+            className="text-gray-400 hover:text-white"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Make Changes
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-900">
+      {/* Auth Banner */}
+      {!isAuthenticated && appState !== "welcome" && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-orange-600 to-orange-500 text-white p-2 text-center text-sm">
+          <div className="max-w-4xl mx-auto flex items-center justify-between">
+            <span>Create a free account to save cards permanently</span>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-white hover:bg-white/10 text-xs"
+                onClick={() => window.location.href = '/auth/login'}
+              >
+                Sign In
+              </Button>
+              <Button
+                size="sm"
+                className="bg-white text-orange-600 hover:bg-gray-100 text-xs"
+                onClick={() => window.location.href = '/auth/sign-up'}
+              >
+                Sign Up
+              </Button>
+            </div>
           </div>
         </div>
       )}
+
+      <div className={!isAuthenticated && appState !== "welcome" ? "pt-12" : ""}>
+        {appState === "welcome" && renderWelcome()}
+        {appState === "templates" && renderTemplates()}
+        {appState === "editing" && renderEditing()}
+        {appState === "preview" && renderPreview()}
+      </div>
     </div>
-    </AuthRedirect>
   )
 }

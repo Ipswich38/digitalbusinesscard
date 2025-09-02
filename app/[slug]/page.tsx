@@ -34,9 +34,15 @@ export default function PublicCardPage() {
 
   const fetchCard = async () => {
     try {
-      // TODO: Re-implement card fetching when database is available
-      // For now, show not found for all dynamic routes
-      setNotFound(true)
+      const response = await fetch(`/api/cards/${slug}`)
+      
+      if (!response.ok) {
+        setNotFound(true)
+        return
+      }
+
+      const data = await response.json()
+      setCard(data.card)
     } catch (error) {
       console.error('Error fetching card:', error)
       setNotFound(true)

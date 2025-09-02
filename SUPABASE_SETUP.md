@@ -1,94 +1,61 @@
-# Supabase Setup Guide
+# Simple Card Saving Setup
 
-Follow these steps to set up authentication and database for your Digital Business Card app.
+Just save cards and access them anywhere! Super simple setup.
 
 ## 1. Create Supabase Project
 
-1. Go to [supabase.com](https://supabase.com)
-2. Create a new project
-3. Wait for the project to be ready
+1. Go to [supabase.com](https://supabase.com) and create a project
+2. Wait for it to be ready
 
-## 2. Configure Environment Variables
+## 2. Add Environment Variables
 
-Add these to your `.env.local` file:
+In Vercel (or your `.env.local` for development):
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=your-project-url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 ```
 
-You can find these values in your Supabase project settings.
+Find these in your Supabase project settings.
 
-## 3. Set up Database Schema
+## 3. Set up Database
 
-1. Go to your Supabase dashboard
-2. Navigate to the SQL editor
-3. Copy and paste the contents of `/scripts/setup-supabase.sql`
-4. Run the SQL script
+1. Go to Supabase dashboard → SQL editor
+2. Copy/paste `/scripts/setup-supabase.sql` 
+3. Run it
 
-This will create:
-- `users` table for user profiles
-- `business_cards` table for storing cards
-- `analytics` table for tracking views/clicks
-- Row Level Security policies
-- Automatic user profile creation trigger
+This creates just one simple `cards` table - that's it!
 
-## 4. Configure Authentication
+## 4. Configure Auth URLs
 
-1. In Supabase dashboard, go to Authentication → Settings
-2. Under Site URL, add your domain:
-   - For development: `http://localhost:3000`
-   - For production: `https://your-domain.com`
-3. Under Redirect URLs, add:
-   - `http://localhost:3000/dashboard` (development)
-   - `https://your-domain.com/dashboard` (production)
+In Supabase dashboard → Authentication → Settings:
 
-## 5. Test Authentication
+**Site URL:** `https://your-domain.com`  
+**Redirect URLs:** `https://your-domain.com/dashboard`
 
-1. Start your development server: `npm run dev`
-2. Visit `/auth/sign-up` to create a test account
-3. Check that you're redirected to `/dashboard`
-4. Verify the user profile was created in the database
+## 5. Test It
 
-## Current Features
+1. Visit `/auth/sign-up` and create an account
+2. Create a card and save it
+3. Check `/dashboard` to see your saved cards
+4. Cards get unique URLs like `/card-abc123` for sharing
 
-✅ **Implemented:**
-- User signup with email/password
-- User login
-- Dashboard with user profile
-- Plan selection (free/pro/enterprise)
-- Automatic user profile creation
-- Row Level Security policies
+## How It Works
 
-🔄 **Coming Next:**
-- Card creation and saving to database
-- Card sharing with unique URLs
-- Analytics tracking
-- Plan limitations and upgrade flow
+**Simple flow:**
+1. User signs up with email/password
+2. Create card → click save → card gets saved with unique URL
+3. Access cards from any device via dashboard
+4. Share cards using the unique URLs
 
-## Database Schema
+**Database:**
+- Just one `cards` table
+- Each card has: title, data, unique slug, user_id
+- That's it! No complex analytics or plans.
 
-### Users Table
-- `id` (UUID, references auth.users)
-- `email` (TEXT, unique)
-- `full_name` (TEXT)
-- `plan` (TEXT: 'free', 'pro', 'enterprise')
-- `created_at`, `updated_at` (TIMESTAMP)
-
-### Business Cards Table
-- `id` (UUID, primary key)
-- `user_id` (UUID, references users)
-- `title` (TEXT)
-- `slug` (TEXT, unique)
-- `category` (TEXT: 'business', 'social-media', 'meme', 'fan', 'art')
-- `is_active` (BOOLEAN)
-- `data` (JSONB, card content)
-- `theme_id` (TEXT)
-- `created_at`, `updated_at` (TIMESTAMP)
-
-### Analytics Table
-- `id` (UUID, primary key)
-- `card_id`, `user_id` (UUID references)
-- `views`, `qr_scans`, `contact_clicks`, `social_clicks` (INTEGER)
-- Various tracking data (JSONB)
-- `created_at`, `updated_at` (TIMESTAMP)
+**Features:**
+✅ Save cards to database  
+✅ Access from any device  
+✅ Unique shareable URLs  
+✅ Simple dashboard to manage cards  
+✅ Works without Supabase (shows setup message)
