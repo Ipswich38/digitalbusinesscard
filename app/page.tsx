@@ -207,7 +207,29 @@ export default function DigitalBusinessCard() {
 
   const handleSave = async () => {
     if (userData.firstName.trim() && userData.mobile.trim()) {
-      // TODO: Add authentication and card saving functionality
+      // Check if user is authenticated - redirect to signup if not
+      try {
+        const { supabase } = await import('@/lib/supabase')
+        const { data: { user } } = await supabase.auth.getUser()
+        
+        if (!user) {
+          // Redirect to signup if not authenticated
+          if (confirm('Sign up to save your card and get a permanent URL with QR code. Continue to create account?')) {
+            window.location.href = '/auth/sign-up'
+            return
+          }
+        } else {
+          // User is authenticated - save card (implement card saving later)
+          alert('Card saving functionality will be implemented with database integration.')
+        }
+      } catch (error) {
+        console.error('Auth check error:', error)
+        // Fallback to signup flow
+        if (confirm('Sign up to save your card and get a permanent URL with QR code. Continue to create account?')) {
+          window.location.href = '/auth/sign-up'
+          return
+        }
+      }
 
       setHasData(true)
       setIsLocked(true)
@@ -386,7 +408,21 @@ export default function DigitalBusinessCard() {
                 Create your account to save and share your digital cards permanently
               </span>
               <div className="flex gap-3">
-                {/* TODO: Add authentication buttons when auth is implemented */}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-white border-white/30 hover:bg-white/10 text-xs"
+                  onClick={() => window.location.href = '/auth/login'}
+                >
+                  Sign In
+                </Button>
+                <Button
+                  size="sm"
+                  className="bg-white text-orange-600 hover:bg-gray-100 text-xs font-semibold"
+                  onClick={() => window.location.href = '/auth/sign-up'}
+                >
+                  Get Started Free
+                </Button>
               </div>
             </div>
           </div>
@@ -415,7 +451,21 @@ export default function DigitalBusinessCard() {
                 Create your account to save and share your digital business card permanently
               </span>
               <div className="flex gap-3">
-                {/* TODO: Add authentication buttons when auth is implemented */}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-white border-white/30 hover:bg-white/10 text-xs"
+                  onClick={() => window.location.href = '/auth/login'}
+                >
+                  Sign In
+                </Button>
+                <Button
+                  size="sm"
+                  className="bg-white text-orange-600 hover:bg-gray-100 text-xs font-semibold"
+                  onClick={() => window.location.href = '/auth/sign-up'}
+                >
+                  Get Started Free
+                </Button>
               </div>
             </div>
           </div>
