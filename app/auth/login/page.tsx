@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ArrowLeft, CreditCard } from "lucide-react"
-import { supabase } from '@/lib/supabase'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -18,12 +17,21 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const router = useRouter()
 
-  const handleLogin = async (e) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setLoading(true)
 
     try {
+      // Dynamically import and check Supabase
+      const { getSupabaseClient } = await import('@/lib/supabase')
+      const supabase = getSupabaseClient()
+      
+      if (!supabase) {
+        setError('Authentication service is not available. Please check configuration.')
+        return
+      }
+
       const { data, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -38,8 +46,8 @@ export default function LoginPage() {
         // Redirect to dashboard
         router.push('/dashboard')
       }
-    } catch (error) {
-      setError('An unexpected error occurred')
+    } catch (error: any) {
+      setError(error?.message || 'An unexpected error occurred')
       console.error('Login error:', error)
     } finally {
       setLoading(false)

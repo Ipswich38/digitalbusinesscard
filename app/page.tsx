@@ -209,7 +209,17 @@ export default function DigitalBusinessCard() {
     if (userData.firstName.trim() && userData.mobile.trim()) {
       // Check if user is authenticated - redirect to signup if not
       try {
-        const { supabase } = await import('@/lib/supabase')
+        const { getSupabaseClient } = await import('@/lib/supabase')
+        const supabase = getSupabaseClient()
+        
+        if (!supabase) {
+          // No Supabase available, redirect to signup
+          if (confirm('Sign up to save your card and get a permanent URL with QR code. Continue to create account?')) {
+            window.location.href = '/auth/sign-up'
+            return
+          }
+        }
+        
         const { data: { user } } = await supabase.auth.getUser()
         
         if (!user) {

@@ -7,12 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarInitials } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Plus, CreditCard, Users, Eye, Download, Settings, LogOut } from "lucide-react"
-import { supabase } from '@/lib/supabase'
-
 export default function DashboardPage() {
-  const [user, setUser] = useState(null)
-  const [profile, setProfile] = useState(null)
-  const [cards, setCards] = useState([])
+  const [user, setUser] = useState<any>(null)
+  const [profile, setProfile] = useState<any>(null)
+  const [cards, setCards] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
@@ -22,6 +20,16 @@ export default function DashboardPage() {
 
   const checkUser = async () => {
     try {
+      // Dynamically import and check Supabase
+      const { getSupabaseClient } = await import('@/lib/supabase')
+      const supabase = getSupabaseClient()
+      
+      if (!supabase) {
+        console.error('Supabase client not available')
+        router.push('/auth/login')
+        return
+      }
+
       // Get current user
       const { data: { user }, error: userError } = await supabase.auth.getUser()
       
@@ -62,7 +70,15 @@ export default function DashboardPage() {
   }
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut()
+    try {
+      const { getSupabaseClient } = await import('@/lib/supabase')
+      const supabase = getSupabaseClient()
+      if (supabase) {
+        await supabase.auth.signOut()
+      }
+    } catch (error) {
+      console.error('Sign out error:', error)
+    }
     router.push('/')
   }
 

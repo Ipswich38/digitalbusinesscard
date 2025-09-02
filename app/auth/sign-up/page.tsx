@@ -9,8 +9,8 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { ArrowLeft, CreditCard } from "lucide-react"
-import { supabase } from '@/lib/supabase'
+import { ArrowLeft, CreditCard, AlertTriangle } from "lucide-react"
+import { useEffect } from 'react'
 
 export default function SignUpPage() {
   const [fullName, setFullName] = useState('')
@@ -20,9 +20,24 @@ export default function SignUpPage() {
   const [plan, setPlan] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [supabaseConfigured, setSupabaseConfigured] = useState<boolean | null>(null)
   const router = useRouter()
 
-  const handleSignUp = async (e) => {
+  useEffect(() => {
+    // Check Supabase configuration on component mount
+    const checkSupabaseConfig = async () => {
+      try {
+        const { isSupabaseConfigured } = await import('@/lib/supabase')
+        setSupabaseConfigured(isSupabaseConfigured())
+      } catch (error) {
+        console.error('Failed to check Supabase config:', error)
+        setSupabaseConfigured(false)
+      }
+    }
+    checkSupabaseConfig()
+  }, [])
+
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
 
@@ -45,6 +60,15 @@ export default function SignUpPage() {
     setLoading(true)
 
     try {
+      // Dynamically import and check Supabase
+      const { getSupabaseClient } = await import('@/lib/supabase')
+      const supabase = getSupabaseClient()
+      
+      if (!supabase) {
+        setError('Authentication service is not available. Please check configuration.')
+        return
+      }
+
       // Sign up with Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
@@ -63,29 +87,14 @@ export default function SignUpPage() {
       }
 
       if (authData?.user) {
-        // Create user profile in database
-        const { error: profileError } = await supabase
-          .from('users')
-          .insert([
-            {
-              id: authData.user.id,
-              email: authData.user.email,
-              full_name: fullName,
-              plan: plan,
-              created_at: new Date()
-            }
-          ])
-
-        if (profileError) {
-          console.error('Profile creation error:', profileError)
-          // Continue anyway - profile can be created later
-        }
-
+        // Note: User profile will be created automatically by the database trigger
+        console.log('User signed up successfully:', authData.user.id)
+        
         // Redirect to dashboard
         router.push('/dashboard')
       }
-    } catch (error) {
-      setError('An unexpected error occurred')
+    } catch (error: any) {
+      setError(error?.message || 'An unexpected error occurred')
       console.error('Signup error:', error)
     } finally {
       setLoading(false)
@@ -120,6 +129,22 @@ export default function SignUpPage() {
             </p>
           </CardHeader>
           <CardContent>
+            {/* Configuration Status */}
+            {supabaseConfigured === false && (
+              <Alert className="mb-4 border-orange-200 bg-orange-50">
+                <AlertTriangle className="h-4 w-4 text-orange-600" />
+                <AlertDescription className="text-orange-800">
+                  Authentication service is not configured. Please set up Supabase environment variables.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {supabaseConfigured === null && (
+              <div className="mb-4 text-center">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="text-sm text-gray-600 mt-2">Checking configuration...</p>
+              </div>
+            )}
             <form onSubmit={handleSignUp} className="space-y-4">
               {/* Full Name */}
               <div className="space-y-2">
